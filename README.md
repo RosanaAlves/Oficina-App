@@ -6,7 +6,7 @@ Aplicativo de fidelização para oficinas mecânicas com:
 - 🏆 Programa de benefícios  
 - 🚗 Histórico de serviços por veículo  
 
-Tecnologias: *,*, PostgreSQL.  
+Tecnologias: *,*, MySql.  
 
 **Objetivo:** Transformar a relação entre oficinas e clientes através da tecnologia.  
 
