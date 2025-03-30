@@ -1,0 +1,147 @@
+ 1. Adicionar Campos no Modelo Veiculo
+
+Atualize seu modelo para registrar a última troca de óleo e a quilometragem:
+python
+Copy
+
+# models.py
+class Veiculo(models.Model):
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
+    modelo = models.CharField(max_length=50)
+    placa = models.CharField(max_length=10, unique=True)
+    quilometragem_atual = models.PositiveIntegerField(default=0)
+    ultima_troca_oleo = models.PositiveIntegerField(default=0)  # KM na última troca
+    data_ultima_troca = models.DateField(null=True, blank=True)
+    proxima_troca_km = models.PositiveIntegerField(default=10000)  # Intervalo padrão (ex.: 10.000 km)
+
+📌 2. Criar uma View para Alertas
+python
+Copy
+
+# views.py
+from django.utils import timezone
+from datetime import timedelta
+
+def alertas_troca_oleo(request):
+    # Veículos com quilometragem próxima da troca (90% do intervalo)
+    alertas = []
+    veiculos = Veiculo.objects.all()
+    
+    for veiculo in veiculos:
+        km_restantes = veiculo.proxima_troca_km - (veiculo.quilometragem_atual - veiculo.ultima_troca_oleo)
+        if km_restantes <= (veiculo.proxima_troca_km * 0.1):  # 10% do intervalo restante
+            alertas.append({
+                'veiculo': veiculo,
+                'km_restantes': km_restantes,
+                'cliente': veiculo.cliente
+            })
+    
+    return render(request, 'alertas_troca_oleo.html', {'alertas': alertas})
+
+📌 3. Template para Exibir Alertas (alertas_troca_oleo.html)
+html
+Copy
+
+<h1>Clientes Próximos da Troca de Óleo</h1>
+<table>
+  <tr>
+    <th>Cliente</th>
+    <th>Veículo</th>
+    <th>KM Restantes</th>
+    <th>Telefone</th>
+  </tr>
+  {% for alerta in alertas %}
+  <tr>
+    <td>{{ alerta.cliente.nome }}</td>
+    <td>{{ alerta.veiculo.modelo }} ({{ alerta.veiculo.placa }})</td>
+    <td>{{ alerta.km_restantes }} km</td>
+    <td><a href="https://wa.me/{{ alerta.cliente.telefone_whatsapp }}">📞 WhatsApp</a></td>
+  </tr>
+  {% endfor %}
+</table>
+
+Run HTML
+📌 4. URL para Acessar os Alertas
+python
+Copy
+
+# urls.py
+urlpatterns = [
+    path('alertas/troca-oleo/', views.alertas_troca_oleo, name='alertas_troca_oleo'),
+]
+
+📌 5. Comando para Enviar Notificações Automáticas
+
+Crie um cron job ou use o Celery para enviar alertas periódicos:
+python
+Copy
+
+# management/commands/enviar_alertas.py
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from oficina.models import Veiculo
+from oficina.utils import enviar_whatsapp  # Função criada anteriormente
+
+class Command(BaseCommand):
+    help = 'Envia alertas de troca de óleo via WhatsApp'
+
+    def handle(self, *args, **options):
+        veiculos = Veiculo.objects.filter(
+            quilometragem_atual__gte=models.F('ultima_troca_oleo') + models.F('proxima_troca_km') * 0.9
+        )
+        
+        for veiculo in veiculos:
+            mensagem = (
+                f"Olá {veiculo.cliente.nome}! Seu {veiculo.modelo} está próximo da troca de óleo. "
+                f"Faltam apenas {veiculo.proxima_troca_km - (veiculo.quilometragem_atual - veiculo.ultima_troca_oleo)} km. "
+                "Agende um horário conosco!"
+            )
+            enviar_whatsapp(veiculo.cliente, mensagem)
+
+Para executar diariamente (via cron):
+bash
+Copy
+
+0 9 * * * /caminho/para/python /caminho/para/manage.py enviar_alertas
+
+📌 6. Painel Administrativo Personalizado
+
+Adicione um filtro no admin do Django para visualizar os alertas:
+python
+Copy
+
+# admin.py
+from django.contrib import admin
+from .models import Veiculo
+
+class VeiculoAdmin(admin.ModelAdmin):
+    list_display = ('modelo', 'placa', 'cliente', 'km_para_troca')
+    list_filter = ('proxima_troca_km',)
+
+    def km_para_troca(self, obj):
+        return obj.proxima_troca_km - (obj.quilometragem_atual - obj.ultima_troca_oleo)
+    km_para_troca.short_description = 'KM até a troca'
+
+admin.site.register(Veiculo, VeiculoAdmin)
+
+🌟 Funcionalidades Adicionais Sugeridas
+
+    Cadastro de Tipos de Óleo:
+    Adicione um modelo TipoOleo para registrar qual óleo foi usado em cada veículo.
+
+    Histórico de Trocas:
+    Crie um modelo Manutencao para registrar todas as trocas passadas.
+
+    Integração com API de Consulta de Placa:
+    Use serviços como FIPE para pré-preencher dados do veículo.
+
+📱 Exemplo de Notificação no WhatsApp
+Copy
+
+Olá João! Seu Ford Ka (ABC-1234) está próximo da troca de óleo. Faltam apenas 850 km. 
+Agende um horário: [link_para_agendamento]
+
+Com essa implementação, o dono da empresa poderá:
+✅ Visualizar clientes próximos da troca em uma página dedicada.
+✅ Receber relatórios periódicos.
+✅ Enviar notificações automáticas via WhatsApp.
