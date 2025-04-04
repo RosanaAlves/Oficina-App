@@ -15,6 +15,6 @@ Este trabalho é parte do projeto integrador da Univesp para o eixo da computaç
 Tema proposto: Desenvolver um software com framework web que utilize noções de banco de dados,praticando controle de versão.
 Tecnologias sugeridas:
 
--HTML e CSS
+- HTML e CSS
 - Banco de dados: PostgreSQL
 - Controle de versões: Git e GitHub
