@@ -1,7 +1,11 @@
-## Criar o backup 
+### Criar o backup 
 
 pg_dump -U postgres -h localhost -d AppWeb -Fc > "C:\Users\Rosana\Desktop\Oficina-App\Banco_de_dados\Backup\backup.backup"
 
-restaurar banco
+## Restaurar banco
 
 pg_restore -U postgres -h localhost -d teste -v "C:\Users\Rosana\Desktop\Oficina-App\Banco_de_dados\Backup\backup.backup"
+
+### Sempre use extensões padrão (.sql ou .backup) para evitar confusão. Se precisar de um backup compactado, adicione -Z 9 (compressão máxima):
+
+pg_dump -U postgres -h localhost -d AppWeb -Fc -Z 9 > "C:/Users/Rosana/Documents/backup.backup"
